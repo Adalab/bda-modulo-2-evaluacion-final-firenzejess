@@ -157,6 +157,8 @@ Por customer_id   */
 -- Unimos customer y rental por su columna en común (customer_id).  Luego contamos los alquileres de cada cliente.
 -- customer.customer_id = rental.customer_id
 
+-- customer → rental
+
 SELECT 
     customer.customer_id,            
     customer.first_name,
@@ -167,6 +169,12 @@ INNER JOIN rental
 ON customer.customer_id = rental.customer_id
 GROUP BY customer.customer_id, customer.first_name, customer.last_name;
 
+
+-- Quiero ver: el id del cliente, el nombre del cliente, el apellido del cliente, cuenta cuántos alquileres tiene cada cliente,  le pongo ese nombre a la columna
+-- Empiezo desde la tabla customer
+-- Uno customer con rental por customer_id,  porque es la columna que tienen en común. Así sé qué alquileres pertenecen a qué cliente
+-- Agrupa los resultados por cliente. Así COUNT cuenta los alquileres de cada cliente por separado. 
+-- Sin esto contaría todos los alquileres de todos los clientes juntos.
 
 
 -- =====================================================
@@ -186,27 +194,40 @@ GROUP BY customer.customer_id, customer.first_name, customer.last_name;
 -- - inventory
 -- - rental
 -- =====================================================
-
-SELECT category.name,
-       COUNT(rental.rental_id) AS total_alquileres
-
-FROM category
-
-INNER JOIN film_category
-    ON category.category_id = film_category.category_id
-
-INNER JOIN film
-    ON film_category.film_id = film.film_id
-
-INNER JOIN inventory
-    ON film.film_id = inventory.film_id
-
-INNER JOIN rental
-    ON inventory.inventory_id = rental.inventory_id
-
-GROUP BY category.name;
+-- category → film_category → film → inventory → rental
 
 
+SELECT category.name,                                         
+       COUNT(rental.rental_id) AS total_alquileres            
+FROM category                                                 
+INNER JOIN film_category                                      
+    ON category.category_id = film_category.category_id       
+INNER JOIN film                                                 
+    ON film_category.film_id = film.film_id              
+INNER JOIN inventory                                          
+    ON film.film_id = inventory.film_id                     
+INNER JOIN rental                                             
+    ON inventory.inventory_id = rental.inventory_id          
+GROUP BY category.name;                                      
+
+
+
+
+-- el nombre de la categoría
+-- cuenta cuántos alquileres hay en cada categoría
+-- Dice desde qué tabla empiezo, category
+-- primer puente.  conecto categoría con sus películas
+-- las une por la columna que tienen en común, que es category_id
+-- segundo puente. Une la tabla film_category con la tabla film
+-- las une por film_id. Ya tenemos categoría + película juntas
+-- tercer puente. Une la tabla film con la tabla inventory, necesito pasar por inventario para llegar a alquileres
+-- las une por film_id.El inventario es necesario porque es el puente entre película y alquiler
+-- cuarto puente. Une la tabla inventory con la tabla rental
+-- las une por inventory_id
+-- Agrupa todos los resultados por nombre de categoría
+
+
+ 
 -- =========================================
 -- EJERCICIO: 12 Encuentra el promedio de duración de las películas para cada clasificación de la tabla `film` y muestra 
 -- la clasificación junto con el promedio de duración.TOTAL DE ALQUILERES POR CATEGORÍA
@@ -219,20 +240,32 @@ GROUP BY rating;
 
 -- AVG () CALCULA LA MEDIA
 
+
+
 -- =========================================
 -- EJERCICIO: 13 Encuentra el nombre y apellido de los actores que aparecen en la película con title "Indian Love".
 -- TABLAS NECESARIAS : ACTOR, FILM_ACTOR Y FILM 
 -- =========================================
 
+-- actor → film_actor → film
 
-SELECT actor.first_name, actor.last_name
-FROM actor
-INNER JOIN film_actor
-      ON actor.actor_id = film_actor.actor_id
+SELECT actor.first_name, actor.last_name                        
+FROM actor                                                     
+INNER JOIN film_actor                                           
+      ON actor.actor_id = film_actor.actor_id                   
 INNER JOIN film
-      ON film_actor.film_id = film.film_id
-WHERE film.title = 'Indian Love';
+      ON film_actor.film_id = film.film_id                      
+WHERE film.title = 'Indian Love';                              
+                                                                
 
+
+-- Quiero ver el nombre y apellido del actor
+-- Empiezo desde la tabla actor
+-- Uno actor con film_actor por actor_id
+-- film_actor es la tabla puente que conecta actores con películas
+-- Uno film_actor con film por film_id, actores + películas juntos
+-- Filtro para quedarme SOLO con la película que se llama "Indian Love"
+-- Sin este WHERE me devolvería actores de TODAS las películas
 
 
 -- =========================================
@@ -249,17 +282,25 @@ OR description LIKE '%cat%';
 -- =========================================
 
 
-SELECT actor.first_name, actor.last_name              
-FROM actor
-LEFT JOIN film_actor                                  
+SELECT actor.first_name, actor.last_name                  
+FROM actor                                                
+LEFT JOIN film_actor                                           
 	ON actor.actor_id = film_actor.actor_id
-WHERE film_actor.film_id IS NULL;                     
+WHERE film_actor.film_id IS NULL;                             
 
+-- Quiero ver el id, nombre y apellido del actor
+-- Empiezo desde la tabla actor
+-- LEFT JOIN trae TODOS los actores, tengan películas o no 
+-- Este WHERE filtra SOLO los que tienen film_id vacío 
 
 /* Queremos TODOS los actores incluso si no tienen películas*/
 /*LEFT JOIN Trae todos los de la izquierda aunque no tengan coincidencia*/
 /* Si no encuentran coincidencia NULL por eso filtramos IS NULL*/
 
+/* ¿Por qué LEFT JOIN y no INNER JOIN?
+
+"Con INNER JOIN solo me devolvería actores que SÍ tienen películas, y precisamente busco los que NO tienen ninguna. 
+Con LEFT JOIN traigo todos los actores y luego con el WHERE film_actor.film_id IS NULL me quedo solo con los que no tienen película"*/
 
 
 -- =========================================
@@ -267,44 +308,65 @@ WHERE film_actor.film_id IS NULL;
 -- =========================================
 
 
-SELECT title
-FROM film
-WHERE release_year BETWEEN 2005 AND 2010;
+SELECT title                                      
+FROM film                                         
+WHERE release_year BETWEEN 2005 AND 2010;         
 
+-- Quiero ver solo el título de la película
+-- La información está en la tabla film
+-- es la columna del año de lanzamiento, filtra años desde 2005 hasta 2010, AMBOS INCLUIDOS.
 
+ 
 -- =========================================
 -- EJERCICIO: 17 Encuentra el título de todas las películas que son de la misma categoría que "Family"
 -- =========================================
 
+-- film → film_category → category
 
+SELECT film.title                                            -- Quiero ver el título de la película
+FROM film                                                    -- Empiezo desde la tabla film
+INNER JOIN film_category                                     -- film_category es la tabla puente entre películas y categorías
+     ON film.film_id = film_category.film_id                 -- Uno film con film_category por film_id
+INNER JOIN category                                          -- TABLA PUENTE 
+	ON film_category.category_id = category.category_id      -- Uno film_category con category por category_id
+WHERE category.name = 'Family';                              -- Filtro para quedarme SOLO con las películas de la categoría "Family"
+                                                             -- Sin este WHERE me devolvería películas de TODAS las categorías
+                                                             
+                                                             
+-- Necesito film_category porque film y category no están conectadas directamente
+-- "Porque film y category no tienen una conexión directa. film_category es la tabla puente que las une,
+-- tiene tanto el film_id como el category_id"
 
-SELECT film.title
-FROM film 
-INNER JOIN film_category
-     ON film.film_id = film_category.film_id
-INNER JOIN category
-	ON film_category.category_id = category.category_id
-WHERE category.name = 'Family';
-   
+-- "La columna que se repite en dos tablas es el ON del JOIN"
 
 
 -- =========================================
 -- EJERCICIO: 18 Muestra el nombre y apellido de los actores que aparecen en más de 10 películas
 -- =========================================
 
+-- EL CAMINO : actor → film_actor
 
-SELECT actor.first_name, actor.last_name, COUNT(film_actor.film_id) AS total_peliculas
-FROM actor
-INNER JOIN film_actor
-    ON actor.actor_id = film_actor.actor_id
-GROUP BY actor.actor_id, actor.first_name, actor.last_name
-HAVING COUNT(film_actor.film_id) > 10;
+-- cuenta cuántas películas tiene cada actor, le pongo ese nombre a la columna del resultado 
+-- Necesito film_actor porque ahí está la relación actor-película
+-- Uno actor con film_actor por actor_id 
+-- Agrupa los resultados por actor
+-- Filtra y se queda solo con actores que tienen más de 10 películas
+-- Usamos HAVING y no WHERE porque estamos filtrando un grupo
+-- Así el COUNT cuenta las películas de cada actor por separado
 
+SELECT actor.first_name, actor.last_name, COUNT(film_actor.film_id) AS total_peliculas  
+FROM actor                                                                                      
+INNER JOIN film_actor                                          
+    ON actor.actor_id = film_actor.actor_id                    
+GROUP BY actor.actor_id, actor.first_name, actor.last_name     
+HAVING COUNT(film_actor.film_id) > 10;                         
+															  
 
 /* HAVING es como un WHERE pero para grupos. Aquí filtra los actores cuyo recuento es mayor que 10. 
 Regla fácil: WHERE filtra filas individuales, HAVING filtra grupos.*/
 
-
+-- "Uso HAVING porque quiero filtrar después de haber contado las películas de cada actor. 
+-- WHERE no puede usar COUNT porque se ejecuta antes de agrupar"
 
 -- =========================================
 -- EJERCICIO: 19 Encuentra el título de todas las películas que son "R" y tienen una duración mayor a 2 horas en la tabla `film`.
@@ -323,6 +385,8 @@ AND length > 120;
 -- y muestra el nombre de la categoría junto con el promedio de duración.
 -- =========================================
 
+-- category → film_category → film
+   
 
 SELECT category.name, AVG(film.length) AS promedio_duracion
 FROM category
@@ -334,11 +398,23 @@ GROUP BY category.name
 HAVING AVG(film.length) > 120;
 
 
+--  nombre de la categoría
+--  promedio de duración de las películas
+-- AVG significa media — suma todas las duraciones y las divide entre el número de películas
+-- Empiezo desde category
+-- Uno category con film_category por category_id
+-- Uno film_category con film por film_id
+-- Agrupa por categoría. Así AVG calcula el promedio de duración de cada categoría por separado.
+-- Filtra y se queda solo con categorías cuyo promedio es mayor a 120 minutos.VUsamos HAVING porque filtramos después de agrupar.
+
+
+
 -- =========================================
 -- EJERCICIO:  21 Encuentra los actores que han actuado en al menos 5 películas y muestra el nombre del actor junto con la cantidad de 
 -- películas en las que han actuado.
 -- =========================================
 
+-- actor → film_actor
 
 
 SELECT actor.first_name, actor.last_name, COUNT(film_actor.film_id) AS total_peliculas
@@ -349,11 +425,20 @@ GROUP BY actor.actor_id, actor.first_name, actor.last_name
 HAVING COUNT(film_actor.film_id) >= 5;
 
 
+-- Quiero ver nombre, apellido y cuántas películas tiene cada actor
+-- Empiezo desde actor
+-- Uno actor con film_actor por actor_id para poder contar las películas
+-- Agrupa por actor para que COUNT cuente las películas de cada uno por separado
+-- Filtra solo los actores con 5 o más películas, >=5 porque el 5 también cuenta
+
+
 -- =========================================
 -- EJERCICIO: 22  Encuentra el título de todas las películas que fueron alquiladas por más de 5 días. Utiliza una subconsulta 
 -- para encontrar los rental_ids con una duración superior a 5 días y luego selecciona las películas correspondientes.*/  -- SUBCONSULTAS
 -- =========================================
 
+
+-- film → inventory → (subconsulta rental)
 -- Primero encontrar rentals que duran más de 5 días. Luego obtener películas.
 
 SELECT title                                     										
@@ -366,6 +451,16 @@ WHERE inventory.inventory_id IN (
     WHERE DATEDIFF(return_date, rental_date) > 5
 );
 
+
+-- Quiero ver los títulos de las películas
+-- Uno film con inventory por film_id
+-- Filtra solo los inventory_id que están dentro de la lista que devuelve la subconsulta
+-- La subconsulta : DATEDIFF(return_date, rental_date) → calcula la diferencia en días entre la fecha de devolución y la fecha de alquiler.
+-- > 5 → filtra solo los alquileres de más de 5 días
+-- Esta subconsulta devuelve una lista de rental_id
+
+
+
 --  /* es una query dentro de otra query.La subconsulta (lo que va dentro de los paréntesis) 
 -- /* se ejecuta primero y devuelve una lista de IDs.La consulta exterior usa esa lista con IN(...)*/
 
@@ -376,6 +471,8 @@ WHERE inventory.inventory_id IN (
 -- Utiliza una subconsulta para encontrar los actores que han actuado en películas de la categoría "Horror" y luego exclúyelos 
 -- de la lista de actores.
 -- =========================================
+
+-- film_actor → film → film_category → category
 
 
 SELECT first_name, last_name
@@ -392,8 +489,16 @@ WHERE actor_id NOT IN (
     WHERE category.name = 'Horror'
 );
 
+-- Quiero ver nombre y apellido de la tabla actor
+-- Excluye los actores que están dentro de la lista de la subconsulta. NOT IN significa "que NO esté en esta lista".
+-- El camino de la subconsulta : actor → film_actor → film_category → category
+-- La subconsulta : Esta subconsulta devuelve los actor_id de todos los actores que SÍ han actuado en películas de Horror
+-- Paso 1 — La subconsulta busca actores que SÍ están en Horror:
+-- Paso 2 — La consulta exterior excluye esos actores:
 
 -- La subconsulta obtiene los IDs de actores que SÍ actúan en Horror. El NOT IN excluye a esos actores.
+
+-- Uso NOT IN con subconsulta porque primero necesito obtener la lista de actores que SÍ están en Horror, y luego excluirlos.
 
 
 
@@ -402,6 +507,7 @@ WHERE actor_id NOT IN (
 
 -- =========================================
 
+-- film → film_category → category
 
 SELECT film.title
 FROM film
@@ -413,3 +519,15 @@ WHERE category.name = 'Comedy'
 AND film.length > 180;
 
 
+-- Quiero ver el título de la película
+-- Empiezo desde film
+-- Uno film con film_category por film_id
+-- Uno film_category con category por category_id
+-- c.name = 'Comedy' → solo películas de comedia
+-- Filtro dos condiciones a la vez con AND : category.name = 'Comedy' → solo películas de comedia
+-- f.length > 180 → solo las que duran más de 180 minutos. Las dos tienen que cumplirse a la vez.
+
+-- ¿Por qué AND y no OR?
+
+-- "Con AND las dos condiciones tienen que cumplirse a la vez. Con OR bastaría con que se cumpla una. 
+-- Aquí necesito que sea comedia Y que dure más de 180 minutos, por eso AND"
